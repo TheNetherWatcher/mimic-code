@@ -17,8 +17,8 @@ jobs:
         run: pip install -r requirements-lock.txt
       - name: Install package
         run: pip install -e . --no-deps
-      - name: Run transpiler unit tests
-        run: pytest tests/test_transpile.py -q
+      - name: Run transpiler and concept order unit tests
+        run: pytest tests/test_transpile.py tests/test_concept_order.py -q
 
   generated-up-to-date:
     name: Check cross-dialect concepts match BQ

@@ -27,6 +27,16 @@ jobs:
         with:
           version: '>= 363.0.0'
 
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      # make_concepts.sh uses mimic_utils to work out the build order
+      - name: Install mimic_utils
+        run: |
+            pip install -r requirements-lock.txt
+            pip install -e . --no-deps
+
       - name: Run make_concepts
         run: |
             echo "Generating tables on BigQuery mimiciv_derived"

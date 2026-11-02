@@ -3,6 +3,7 @@ import logging
 import sys
 
 from mimic_utils.compare_concepts import compare_concepts
+from mimic_utils.concept_order import print_concept_order
 from mimic_utils.transpile import transpile_file, transpile_folder
 
 
@@ -58,6 +59,21 @@ def main():
         help="Sub-folder names to skip (e.g. cookbook other-languages)."
     )
     folder_parser.set_defaults(func=transpile_folder)
+
+    order_parser = subparsers.add_parser(
+        'concept_order',
+        help='Print the concept files in the order they must be built.',
+        description=(
+            'Print the SQL files in a concepts folder, one per line, so that each '
+            'concept comes after the concepts it reads.'
+        ),
+    )
+    order_parser.add_argument("concepts_dir", help="Folder with the BigQuery concept SQL files.")
+    order_parser.add_argument(
+        "--derived_schema", default="mimiciv_derived",
+        help="Schema the concepts read each other's tables from."
+    )
+    order_parser.set_defaults(func=print_concept_order)
 
     compare_parser = subparsers.add_parser(
         'compare_concepts',

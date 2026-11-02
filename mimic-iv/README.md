@@ -29,7 +29,8 @@ These scripts have been converted to PostgreSQL and DuckDB by a transpilation sc
 ### BigQuery
 
 Generating the concepts requires the [Google Cloud SDK](https://cloud.google.com/sdk) to be installed.
-A shell script, [make_concepts.sh](/mimic-iv/concepts/make_concepts.sh), is provided which iterates over each folder and creates a table with the same name as the concept file. Concept names have been chosen to avoid collisions.
+A shell script, [make_concepts.sh](/mimic-iv/concepts/make_concepts.sh), is provided which creates a table with the same name as each concept file. Concept names have been chosen to avoid collisions.
+The script builds each concept after the concepts it reads, using an order worked out from the SQL by `mimic_utils concept_order`, so `mimic_utils` must be installed (`pip install -e .` from the repository root).
 
 Generating a single concept can be done by calling the Google Cloud SDK as follows:
 

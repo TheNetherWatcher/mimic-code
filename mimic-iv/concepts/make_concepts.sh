@@ -39,56 +39,17 @@ VALUES
   ('mimic_code_commit_hash', '${GIT_COMMIT_HASH}');
 EOF
 
-# generate a few tables first as the desired order isn't alphabetical
-# shellcheck disable=SC2043  # single-entry loop kept so more tables can be added
-for table_path in demographics/icustay_times;
-do
-  table=$(echo "${table_path}" | rev | cut -d/ -f1 | rev)
-  echo "Generating ${TARGET_DATASET}.${table}"
-  bq query "${BQ_OPTIONS[@]}" --destination_table="${TARGET_DATASET}.${table}" < "${table_path}.sql"
-done
+# generate the tables in dependency order: each concept comes after the
+# concepts it reads. The order is worked out from the SQL by mimic_utils,
+# installed with `pip install -e .` from the repository root.
+if ! CONCEPT_ORDER=$(mimic_utils concept_order .); then
+    echo "Could not work out the concept build order. Is mimic_utils installed?" >&2
+    exit 1
+fi
 
-# generate tables in subfolders
-# order is important for a few tables here:
-# * firstday should go last
-# * sepsis depends on score (sofa.sql in particular)
-# * organfailure depends on measurement
-for d in demographics comorbidity measurement medication organfailure treatment firstday score sepsis;
-do
-    for fn_path in "${d}"/*;
-    do
-        fn=${fn_path##*/}
-        # only run SQL queries
-        if [[ "${fn: -4}" == ".sql" ]]; then
-            # table name is file name minus extension
-            tbl=$(echo "${fn}" | rev | cut -d. -f2- | rev)
-
-            # skip certain tables where order matters
-            skip=0
-            for skip_table in meld icustay_times first_day_sofa kdigo_stages vasoactive_agent norepinephrine_equivalent_dose sepsis3
-            do
-              if [[ "${tbl}" == "${skip_table}" ]]; then
-                skip=1
-                break
-              fi
-            done;
-            if [[ "${skip}" == "1" ]]; then
-              continue
-            fi
-
-            # not skipping - so generate the table on bigquery
-            echo "Generating ${TARGET_DATASET}.${tbl}"
-            bq query "${BQ_OPTIONS[@]}" --destination_table="${TARGET_DATASET}.${tbl}" < "${fn_path}"
-        fi
-    done
-done
-
-echo "Now generating tables which were skipped due to depending on other tables."
-# generate tables after the above, and in a specific order to ensure dependencies are met
-for table_path in firstday/first_day_sofa organfailure/kdigo_stages organfailure/meld medication/vasoactive_agent medication/norepinephrine_equivalent_dose sepsis/sepsis3;
-do
-  table=$(echo "${table_path}" | rev | cut -d/ -f1 | rev)
-
-  echo "Generating ${TARGET_DATASET}.${table}"
-  bq query "${BQ_OPTIONS[@]}" --destination_table="${TARGET_DATASET}.${table}" < "${table_path}.sql"
-done
+while IFS= read -r fn_path; do
+    # table name is file name minus extension
+    tbl=$(basename "${fn_path}" .sql)
+    echo "Generating ${TARGET_DATASET}.${tbl}"
+    bq query "${BQ_OPTIONS[@]}" --destination_table="${TARGET_DATASET}.${tbl}" < "${fn_path}"
+done <<< "${CONCEPT_ORDER}"
